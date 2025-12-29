@@ -1,6 +1,5 @@
 from typing import Optional
 
-import ipdb
 import torch
 from torch import Tensor
 
@@ -54,7 +53,7 @@ def weighted_procrustes(
     H = src_points_centered.permute(0, 2, 1) @ (weights * tgt_points_centered)
 
     if torch.isnan(H).any():
-        ipdb.set_trace()
+        import pdb; pdb.set_trace()
 
     U, _, V = torch.svd(H.cpu())  # H = USV^T
     Ut, V = U.transpose(1, 2).cuda(), V.cuda()

@@ -1,0 +1,11 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "python-envs.pythonProjects": [
+        {
+            "path": "views/test_tube_rack_normed",
+            "envManager": "ms-python.python:conda",
+            "packageManager": "ms-python.python:conda"
+        }
+    ]
+}

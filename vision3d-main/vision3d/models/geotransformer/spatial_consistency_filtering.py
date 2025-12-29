@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from IPython import embed
 from torch import Tensor
 
 from vision3d.ops import spatial_consistency

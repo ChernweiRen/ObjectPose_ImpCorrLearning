@@ -70,7 +70,7 @@ class CheckpointManager:
 
         # NOTE: save only model weights and metadata
         filename = osp.join(self._checkpoint_dir, filename)
-        torch.save(state_dict, filename)
+        # torch.save(state_dict, filename)
         logger.info("Checkpoint saved to '{}'.".format(filename))
 
         if clean_checkpoints:

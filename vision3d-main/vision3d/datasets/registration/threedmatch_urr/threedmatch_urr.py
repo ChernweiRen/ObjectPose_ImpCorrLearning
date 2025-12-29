@@ -2,7 +2,6 @@ import os.path as osp
 from typing import Optional
 
 import cv2
-import ipdb
 import numpy as np
 import torch.utils.data
 from skimage.transform import resize

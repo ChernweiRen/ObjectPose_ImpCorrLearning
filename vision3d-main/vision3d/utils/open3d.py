@@ -1,6 +1,5 @@
 from typing import List, Optional
 
-import ipdb
 import matplotlib.colors
 import numpy as np
 import open3d as o3d
@@ -173,7 +172,6 @@ def make_open3d_rays(rays_loc, rays_points):
     )
     line_points = np.concatenate([rays_loc[:, None, :], rays_points], axis=1).reshape(-1, 3)
 
-    # ipdb.set_trace()
 
     rays = o3d.geometry.LineSet()
     rays.points = o3d.utility.Vector3dVector(line_points)

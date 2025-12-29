@@ -4,7 +4,6 @@ import os.path as osp
 import time
 from typing import Tuple
 
-import ipdb
 import torch
 from torch.nn.parallel import DistributedDataParallel
 from tqdm import tqdm
@@ -333,7 +332,6 @@ class BaseTrainer(abc.ABC):
         torch.save(self.model, model_file)
         self.log(f"Model object saved to '{model_file}'.", level="ERROR")
 
-        ipdb.set_trace()
 
     @abc.abstractmethod
     def train_epoch(self):
