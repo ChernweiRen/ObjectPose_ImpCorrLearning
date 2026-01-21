@@ -1,4 +1,13 @@
 views/
+views_tube/
 glb_*/
 hdri_bgs/
 objectpose/stage_2/workspace/
+dst_folder/
+dst_folder_full/
+views_/
+dst_folder_tube/
+dst_folder_tube_full/
+ply_objs/
+
+*.png

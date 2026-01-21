@@ -29,7 +29,7 @@ ensure_dir(_C.exp.result_dir)
 
 # data
 _C.data = edict()
-_C.data.dataset_dir = "/zssd/dataset/kitti_odometry/"
+_C.data.dataset_dir = "/fs/rencw/corri2p_data/"
 
 # train data
 _C.train = edict()
