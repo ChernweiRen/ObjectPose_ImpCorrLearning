@@ -13,5 +13,8 @@
     --res_w 640 \
     --res_h 480 \
     --hdrs_dir /data/user/rencw/ICL-I2PReg/hdri_bgs \
+    --silent_mode
     # --auto_offset True
     # --camera_dist 1.2
+
+# move from views_tube_tmp to views_tube

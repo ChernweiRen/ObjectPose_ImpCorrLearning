@@ -6,7 +6,7 @@ Fixes:
 4. Adds Occlusion-Aware (Visible) Mask rendering pass using Holdout.
 5. Adds support for 'None' table (floating objects with random rotation).
 6. Fixes file overwriting issues (0001 suffix) and occlusion retry logic.
-7. strict orientation logic for liquid objects.
+7. Strict orientation logic for liquid objects (Apply Rotation Fix).
 """
 
 import argparse
@@ -68,153 +68,42 @@ def randomize_glass_ior(objects, mat_target_name="Glass.002", min_ior=1.0, max_i
     if modified_count > 0:
         print(f"  [Material] Randomized Glass IOR to {new_ior:.3f} for {modified_count} slots.")
 
-# def randomize_water_height(objects, target_name="tube.002", min_scale=0.0, max_scale=0.084):
-#     found = False
-#     new_scale = random.uniform(min_scale, max_scale)
-#     for obj in objects:
-#         if target_name in obj.name:
-#             obj.scale[1] = new_scale
-#             print(f"  [Water] Set '{obj.name}' scale.y to {new_scale:.5f}")
-#             found = True
-#     if not found:
-#         print(f"  [Water] Warning: Could not find water object with name '{target_name}'")
-
-
 def randomize_water_height(objects, target_name="tube.002", min_scale=0.0, max_scale=0.084):
     found = False
     new_scale = random.uniform(min_scale, max_scale)
-    
-    # 记录当前活动物体
-    original_active = bpy.context.view_layer.objects.active
-    
     for obj in objects:
         if target_name in obj.name:
-            # 1. 选中水体
-            bpy.context.view_layer.objects.active = obj
-            obj.select_set(True)
-            
-            # ========================================================
-            # 步骤 A: 修复液面倾斜 (Shear)
-            # ========================================================
-            # 这一步会把“歪”了的坐标系扶正。
-            # 副作用：扶正后，Blender 强制规定 Z 轴是高度。
-            # 我们只应用旋转，【千万不要】应用缩放(Scale=False)，否则原本的“细”就丢了。
-            try:
-                bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-            except Exception as e:
-                print(f"  [Water] Apply transform failed (likely multi-user data): {e}")
-
-            # ========================================================
-            # 步骤 B: 调整高度 (Z轴)
-            # ========================================================
-            # 坐标系扶正后，Z 轴就是垂直方向。
-            # 我们只改 Z (高度)，绝对不碰 X 和 Y (宽度)，这样就不会变粗了！
-            obj.scale[2] = new_scale
-            
-            print(f"  [Water] Rectified rotation & Set height (Z) to {new_scale:.5f}")
+            obj.scale[1] = new_scale
+            print(f"  [Water] Set '{obj.name}' scale.y to {new_scale:.5f}")
             found = True
-            
-            obj.select_set(False)
-
-    # 恢复现场
-    if original_active:
-        bpy.context.view_layer.objects.active = original_active
-
     if not found:
         print(f"  [Water] Warning: Could not find water object with name '{target_name}'")
-        
-        
-def check_and_apply_solidify(obj):
-    if obj.type != 'MESH': return
 
-    print(f"\n========== DIAGNOSIS: {obj.name} ==========")
-    
-    # 1. 打印所有 Modifier
-    print(f"  [Modifiers List]:")
-    if len(obj.modifiers) == 0:
-        print("    (None)")
-    else:
-        for mod in obj.modifiers:
-            # 打印名字和类型
-            print(f"    - Name: '{mod.name}' | Type: {mod.type}")
-            # 如果是实体化，额外打印参数
-            if mod.type == 'SOLIDIFY':
-                print(f"      -> Thickness: {mod.thickness:.4f}, Offset: {mod.offset}")
-
-    # 2. 打印形态键 (Shape Keys) - 这是导致 Apply 失败和乱码报错的头号杀手
-    if obj.data.shape_keys:
-        print(f"  [CRITICAL WARNING] Shape Keys detected! (Blocks modifier applying)")
-        for key_block in obj.data.shape_keys.key_blocks:
-             print(f"    - Key: {key_block.name} (Value: {key_block.value})")
-    else:
-        print(f"  [Shape Keys]: None (Safe)")
-
-    # 3. 检查数据用户数
-    print(f"  [Data Users]: {obj.data.users} (If > 1, apply might fail)")
-    print("===========================================\n")
-
-    # ==========================================
-    # 原有的修复逻辑 (尝试 Convert)
-    # ==========================================
-    solidify_mods = [m for m in obj.modifiers if m.type == 'SOLIDIFY']
-    
-    if solidify_mods:
-        try:
-            bpy.context.view_layer.objects.active = obj
-            
-            # 1. 解决 Multi-user
-            if obj.data.users > 1:
-                obj.data = obj.data.copy()
-                
-            # 2. 移除形态键 (如果有)
-            if obj.data.shape_keys:
-                print(f"    [Auto-Fix] Clearing Shape Keys...")
-                obj.active_shape_key_index = 0
-                bpy.ops.object.shape_key_remove(all=True)
-
-            # 3. 强行转网格
-            bpy.ops.object.convert(target='MESH')
-            print(f"    [Action] Successfully converted '{obj.name}' to Mesh.")
-            
-        except Exception as e:
-            print(f"    [Error] Failed to convert: {repr(e)}")
-        
-        
-
-# 【修改点 1】 配置表支持 None
+# 【修改点 1】 配置表支持 None (无条件支持)
 TABLE_CONFIG = {
-    # "plane_checker.glb": [-8., -8., 8., 8.],
-    # "plane_furn_cabinet.glb": [-7.96, -3.46, 9.1, 3.46],
-    # "plane_furn.glb": [7.32],
-    # "plane_gray.glb": [-4.0, -4.0, 4.0, 4.0],
-    # "plane_wood.glb": [-2.96, -3.98, 2.96, 3.98],
-    # "plane_table.glb": [-4.6, -7.6, 4.6, 7.6],
-    # "plane_desk.glb": [-4.52, -8.0, 4.52, 8.0],
-    # "plane_round_table.glb": [6.28],
-    # "plane_office_table.glb": [-3.78, -6.6, 3.78, 6.6],
+    "plane_checker.glb": [-8., -8., 8., 8.],
+    "plane_furn_cabinet.glb": [-7.96, -3.46, 9.1, 3.46],
+    "plane_furn.glb": [7.32],
+    "plane_gray.glb": [-4.0, -4.0, 4.0, 4.0],
+    "plane_wood.glb": [-2.96, -3.98, 2.96, 3.98],
+    "plane_table.glb": [-4.6, -12.68, 4.6, 12.68],
 }
-TABLE_CONFIG[None] = 5.
 TABLE_LIST = list(TABLE_CONFIG.keys())
 
 # Fixed Object Config
-# fixed_obj_names_list = ["tube.blend", "tube_water.blend", "tube_thick.blend"]
-fixed_obj_names_list = ["tube_water.blend", "tube.blend"]
-# fixed_obj_names_list = ["tube_water.blend"]
+fixed_obj_names_list = ["tube.blend", "tube_water.blend"]
 fixed_obj_names = random.choice(fixed_obj_names_list)
-whole_obj_visib_ratio_threshold = 0.004
+whole_obj_visib_ratio_threshold = 0.001
 occ_ratio_threshold = 0.6
 
-
+# 【修改点 2】 始终允许 None 桌子
+TABLE_CONFIG[None] = [0.6] 
 
 fixed_obj_rand_proc_func = {
-    # "tube.blend": {randomize_glass_ior: ["Glass.002", 1.1, 2.0], },
-    "tube.blend": {},
-    # "tube_water.blend": {randomize_water_height: ["tube.002", 0.0, 0.084], randomize_glass_ior: ["Glass.002", 1.1, 2.0]},
-    "tube_water.blend": {randomize_water_height: ["tube.002", 0.0, 0.065]},
-    # "tube_thick.blend": {randomize_glass_ior: ["Glass.002", 1.1, 2.0]},
-    # "tube_water_thick.blend": {randomize_water_height: ["tube.002", 0.0, 0.084], randomize_glass_ior: ["Glass.002", 1.1, 2.0]},
+    "tube.blend": {randomize_glass_ior: ["Glass.002", 1.1, 2.0], },
+    "tube_water.blend": {randomize_water_height: ["tube.002", 0.0, 0.084], randomize_glass_ior: ["Glass.002", 1.1, 2.0]},
 }
-
+    
 OBJECT_LIST = [] 
 
 def get_all_children(obj):
@@ -258,12 +147,8 @@ def bbox_overlap_3d(bbox_a, bbox_b):
         a_max.z <= b_min.z or a_min.z >= b_max.z
     )
 
-def get_scene_objects_set(): 
-    return set(bpy.context.scene.objects)
-
-def get_new_objects(old_set): 
-    return [o for o in bpy.context.scene.objects if o not in old_set]
-
+def get_scene_objects_set(): return set(bpy.context.scene.objects)
+def get_new_objects(old_set): return [o for o in bpy.context.scene.objects if o not in old_set]
 def get_meshes_from_objects(objs):
     meshes = []
     for o in objs:
@@ -423,37 +308,6 @@ scene.cycles.use_denoising = True
 scene.cycles.denoiser = "OPTIX"
 scene.cycles.samples = 512
 
-
-
-# ========================================================
-# 【新增】消除水体/玻璃噪点的关键设置 (Anti-Firefly Settings)
-# ========================================================
-# 1. 间接光钳制 (Clamp Indirect): 
-#    限制间接光线（弹射光）的最大亮度。默认是 0 (无限制)。
-#    设置为 10.0 或 5.0 可以极大地消除“萤火虫”噪点，且对整体画面亮度影响很小。
-scene.cycles.sample_clamp_indirect = 20.
-
-# ========================================================
-# 【关键修复】解决玻璃变黑的问题
-# ========================================================
-# 提高最大光线反弹次数。默认通常是 12，对于厚玻璃建议 16-32。
-scene.cycles.max_bounces = 32
-
-# 【核心】透射(Transmission)反弹。这是控制玻璃透明度的关键。
-# 如果太低，光线穿不过多层玻璃，就会变黑。
-scene.cycles.transmission_bounces = 32
-
-# 透明(Transparency)反弹。控制 Alpha 通道的堆叠层数。
-scene.cycles.transparent_max_bounces = 32
-
-# 漫射和光泽反弹也可以稍微提高，但 透射(Transmission) 是最重要的
-scene.cycles.diffuse_bounces = 8
-scene.cycles.glossy_bounces = 16
-
-
-
-
-
 cprefs = bpy.context.preferences.addons['cycles'].preferences
 cprefs.compute_device_type = args.device 
 cprefs.get_devices()
@@ -532,8 +386,6 @@ def rename_output(folder, prefix, index, ext=".png"):
 def clean_before_render(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
-    # Also clean potential 0001 artifact if it exists from previous run
-    # Assuming standard blender appending
     base = str(file_path).replace('.png', '').replace('.exr', '')
     ext = '.png' if str(file_path).endswith('.png') else '.exr'
     artifact = f"{base}0001{ext}"
@@ -615,12 +467,14 @@ def save_images():
         root = find_root_object(current_new_objs)
         meshes = get_meshes_from_objects(current_new_objs)
         
+        # 【修改点 3：关键修复】加载后立即应用旋转，确保 (0,0,0) 等于当前视觉竖直状态
+        # 必须先清理动画，再 Apply Rotation
         for o in current_new_objs:
             if o.animation_data:
                 o.animation_data_clear()
             if o.rotation_mode != 'XYZ':
                 o.rotation_mode = 'XYZ'
-
+        
         # 激活 root 并应用旋转 (归一化物体的坐标系)
         # 注意：只针对 Root 进行 Apply，假设子物体跟随 Root
         bpy.context.view_layer.objects.active = root
@@ -630,23 +484,10 @@ def save_images():
         except Exception as e:
             print(f"[Warning] Failed to apply rotation to {root.name}: {e}")
         
-
         is_target = fixed_obj_names in obj_glb
         
         if is_target:
             print(f"  [Info] Identified target: {obj_glb}")
-            
-            # ========================================================
-            # 【插入这里】对加载进来的每个零件都检查一遍实体化修改器
-            # ========================================================
-            print("  --- Inspecting Modifiers ---")
-            for o in current_new_objs:
-                # 顺便检查它是不是我们要找的玻璃管
-                check_and_apply_solidify(o)
-            print("  ----------------------------")
-            # ========================================================
-            
-            
             for func, params in fixed_obj_rand_proc_func[fixed_obj_names].items():
                 func(current_new_objs, *params)
             fixed_obj_parts.extend(current_new_objs)
@@ -663,16 +504,16 @@ def save_images():
             if table_name is None:
                 # --- 无桌子 ---
                 if is_liquid_obj:
-                    # 有水：强制竖直
+                    # 有水：强制竖直 (只随机 Z)
                     root.rotation_euler = (0, 0, random.uniform(0, 2 * math.pi))
                 else:
-                    # 无水：3D 随机
+                    # 无水：全随机 3D 旋转
                     root.rotation_euler = (
                         random.uniform(0, 2 * math.pi),
                         random.uniform(0, 2 * math.pi),
                         random.uniform(0, 2 * math.pi)
                     )
-
+                
                 radius = table_bbox_cfg if isinstance(table_bbox_cfg, (float, int)) else 0.6
                 rx = random.uniform(-radius, radius)
                 ry = random.uniform(-radius, radius)
@@ -708,7 +549,7 @@ def save_images():
                     # 有水：强制竖直
                     root.rotation_euler = (0, 0, random.uniform(0, 2 * math.pi))
                 else:
-                    # 无水：50% 竖直，50% 横躺 (绕X转90度 + 随机Z)
+                    # 无水：50% 竖直，50% 横躺
                     if random.random() < 0.5:
                         root.rotation_euler = (0, 0, random.uniform(0, 2 * math.pi))
                     else:
@@ -742,10 +583,7 @@ def save_images():
     nodes = world.node_tree.nodes; nodes.clear()
     env_tex = nodes.new(type="ShaderNodeTexEnvironment")
     env_tex.image = bpy.data.images.load(os.path.join(args.hdrs_dir, random.choice(os.listdir(args.hdrs_dir))))
-    # random strength between 0.8 and 2.5
-    bg_strength = random.uniform(0.8, 2.5)
-    print(f"Background strength: {bg_strength}")
-    bg = nodes.new(type="ShaderNodeBackground"); bg.inputs["Strength"].default_value = bg_strength
+    bg = nodes.new(type="ShaderNodeBackground"); bg.inputs["Strength"].default_value = 1.0
     out = nodes.new(type="ShaderNodeOutputWorld")
     world.node_tree.links.new(env_tex.outputs["Color"], bg.inputs["Color"])
     world.node_tree.links.new(bg.outputs["Background"], out.inputs["Surface"])
@@ -833,8 +671,6 @@ def save_images():
             
             f_rgb_path = str(out_dir_scene / f"{i:03d}.png")
             scene.render.filepath = f_rgb_path
-            
-            # 【修复点】渲染前清理
             clean_before_render(f_rgb_path)
             
             if args.silent_mode:
@@ -893,7 +729,6 @@ def save_images():
             temp_junk = out_dir_scene / "junk_pass3.png"
             scene.render.filepath = str(temp_junk)
             
-            # 【修复点】Mask 输出前，先删除目标文件，防止 0001
             final_mask_path = out_dir_scene / f"{f_mask}.png"
             clean_before_render(final_mask_path)
             
@@ -931,7 +766,6 @@ def save_images():
             temp_junk_visib = out_dir_scene / "junk_pass4.png"
             scene.render.filepath = str(temp_junk_visib)
             
-            # 【修复点】Mask Visib 输出前，先删除目标文件
             final_mask_visib_path = out_dir_scene / f"{f_mask_visib}.png"
             clean_before_render(final_mask_visib_path)
             
@@ -960,22 +794,34 @@ def save_images():
             
             whole_obj_visib_ratio = 0
             if count_visib is not None:
-                whole_obj_visib_ratio = count_visib.sum() / count_visib.shape[0]
+                whole_obj_visib_ratio = count_visib.sum() / (count_visib.shape[0] * count_visib.shape[1])
             
-            if whole_obj_visib_ratio < whole_obj_visib_ratio_threshold:
+            if occ_ratio > occ_ratio_threshold or whole_obj_visib_ratio < whole_obj_visib_ratio_threshold:
                 print(f"  [Retry] View {i} rejected. Occ: {occ_ratio:.2f}, VisRatio: {whole_obj_visib_ratio:.4f}")
                 
-                # 【修复点】Retry 时强制删除本轮生成的文件
+                # 【修改点 C：Retry 时深度清理】同时删除标准文件名和可能残留的0001
                 files_to_clean = [
                     Path(f_rgb_path),
                     final_depth_path,
                     mask_path,
                     visib_mask_path
                 ]
+                
+                # 遍历删除本体和0001变体
                 for f in files_to_clean:
+                    # Delete main file
                     if f.exists():
                         try: os.remove(f)
                         except: pass
+                    
+                    # Delete 0001 variant
+                    base = str(f).replace('.png', '').replace('.exr', '')
+                    ext_f = '.png' if str(f).endswith('.png') else '.exr'
+                    artifact = Path(f"{base}0001{ext_f}")
+                    if artifact.exists():
+                        try: os.remove(artifact)
+                        except: pass
+                
                 continue
             else:
                 valid_cam_poses.append(RT)

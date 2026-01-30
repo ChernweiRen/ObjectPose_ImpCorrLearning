@@ -30,10 +30,16 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 # mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/test_tube_rack_vB_GLTF.ply"
 # mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/test_tube_rack_vC_NegZ.ply"
 # mesh_path = "/data/user/rencw/ICL-I2PReg/glb_objs/test_tube_rack.glb"
-mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_vC_NegZ.ply"
+# mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_vC_NegZ.ply"
+# mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_vA_Blender.ply"
+mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_thick_vA_Blender.ply"
+# mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_thick_vB_GLTF.ply"
+# mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_thick_vC_NegZ.ply"
+# mesh_path = "/data/user/rencw/ICL-I2PReg/ply_objs/tube_thick_vD_Swap.ply"
 ext = os.path.splitext(mesh_path)[1]
 
 global_scale = 20.
+# global_scale = 1.0
 
 if ext == ".ply":
     # bpy.ops.import_mesh.ply(filepath=mesh_path)
@@ -49,13 +55,16 @@ obj = bpy.context.selected_objects[0]
 print(obj.scale)
 # obj.scale = (0.001, 0.001, 0.001)
 obj.scale = (0.001/global_scale, 0.001/global_scale, 0.001/global_scale)
+# location
+print(obj.location)
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # ------------------------------------------------
 # Load pose (object-to-camera)
 # ------------------------------------------------
 # npz_data = np.load("/data/user/rencw/ICL-I2PReg/views/plane_furn__test_tube_rack_mass_chalice/007.npz")
-npz_data = np.load("/data/user/rencw/ICL-I2PReg/views_tube/plane_furn__tube/007.npz")
+# npz_data = np.load("/data/user/rencw/ICL-I2PReg/views_tube/plane_furn__tube/007.npz")
+npz_data = np.load("/data/user/rencw/ICL-I2PReg/views_tube/plane_table.glb__tube_thick.blend/002.npz")
 RT = npz_data["obj2cam_poses"]
 RT_copy = RT.copy()
 # unscale the rotation

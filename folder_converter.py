@@ -36,7 +36,8 @@ for src_folder_path, dst_folder_path in zip(src_folder_path_list, dst_folder_pat
     for idx in idx_list:
         rgb_path = os.path.join(src_folder_path, f"{idx:03d}.png")
         mask_path = os.path.join(src_folder_path, f"{idx:03d}_mask.png")
-        mask_visib_path = os.path.join(src_folder_path, f"{idx:03d}_mask.png")
+        # mask_visib_path = os.path.join(src_folder_path, f"{idx:03d}_mask.png")
+        mask_visib_path = os.path.join(src_folder_path, f"{idx:03d}_mask_visib.png")
         depth_path = os.path.join(src_folder_path, f"{idx:03d}_depth.npy")
         npz_path = os.path.join(src_folder_path, f"{idx:03d}.npz")
         
